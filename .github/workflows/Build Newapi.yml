@@ -31,7 +31,7 @@ jobs:
           path: new-api
           ref: ${{ github.event.client_payload.ref || github.event.inputs.branch || 'main' }}
           fetch-depth: 0
-          token: ${{ secrets.WEBHOOK_PAT }}
+          token: ${{ secrets.REPO_PAT }}
 
       - name: Save version info
         working-directory: new-api
@@ -58,7 +58,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GH_PAT }}
+          password: ${{ secrets.REPO_PAT }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
