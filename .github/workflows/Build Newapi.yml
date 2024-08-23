@@ -39,7 +39,7 @@ jobs:
           if [ -n "${{ github.event.inputs.tag }}" ]; then
             git checkout ${{ github.event.inputs.tag }}
           fi
-          git describe --tags > VERSION
+          git describe --tags 2>/dev/null | tee VERSION || echo "1.0.0" > VERSION
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
