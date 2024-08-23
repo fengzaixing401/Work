@@ -8,6 +8,8 @@ on:
 jobs:
   check-and-update:
     runs-on: ubuntu-latest
+    outputs:
+      has_updates: ${{ steps.check_updates.outputs.has_updates }}
     steps:
       - name: Checkout Work repository
         uses: actions/checkout@v3
@@ -32,11 +34,10 @@ jobs:
             git push origin main
           fi
 
-      - name: Trigger update workflow
-        if: steps.check_updates.outputs.has_updates == 'true'
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.REPO_PAT }}" \
-            https://api.github.com/repos/fengzaixing401/Work/dispatches \
-            -d '{"event_type":"new-api-update", "client_payload": {"ref": "main"}}'
+  call-build-workflow:
+    needs: check-and-update
+    if: needs.check-and-update.outputs.has_updates == 'true'
+    uses: ./.github/workflows/Build Newapi.yml
+    with:
+      branch: 'main'
+    secrets: inherit
