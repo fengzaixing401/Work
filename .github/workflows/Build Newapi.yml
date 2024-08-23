@@ -1,8 +1,16 @@
-name: Build new-api Docker image
+name: Build Newapi
 
 on:
-  repository_dispatch:
-    types: [new-api-update]
+  workflow_call:
+    inputs:
+      branch:
+        description: 'Branch to build from new-api repo'
+        required: true
+        type: string
+      tag:
+        description: 'Tag to build (leave empty for latest)'
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       branch:
@@ -29,15 +37,15 @@ jobs:
         with:
           repository: fengzaixing401/new-api
           path: new-api
-          ref: ${{ github.event.client_payload.ref || github.event.inputs.branch || 'main' }}
+          ref: ${{ inputs.branch || 'main' }}
           fetch-depth: 0
           token: ${{ secrets.REPO_PAT }}
 
       - name: Save version info
         working-directory: new-api
         run: |
-          if [ -n "${{ github.event.inputs.tag }}" ]; then
-            git checkout ${{ github.event.inputs.tag }}
+          if [ -n "${{ inputs.tag }}" ]; then
+            git checkout ${{ inputs.tag }}
           fi
           git describe --tags 2>/dev/null | tee VERSION || echo "1.0.0" > VERSION
 
