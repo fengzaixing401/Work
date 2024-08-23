@@ -1,0 +1,42 @@
+name: Check Newapi Update
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 每6小时运行一次
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Work repository
+        uses: actions/checkout@v3
+        with:
+          repository: fengzaixing401/Work
+          token: ${{ secrets.REPO_PAT }}
+
+      - name: Check for upstream updates
+        id: check_updates
+        run: |
+          git clone https://github.com/fengzaixing401/new-api.git
+          cd new-api
+          git remote add upstream https://github.com/Calcium-Ion/new-api.git
+          git fetch upstream
+          if git diff --quiet HEAD upstream/main; then
+            echo "No updates found"
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+          else
+            echo "Updates found"
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+            git merge upstream/main
+            git push origin main
+          fi
+
+      - name: Trigger update workflow
+        if: steps.check_updates.outputs.has_updates == 'true'
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.REPO_PAT }}" \
+            https://api.github.com/repos/fengzaixing401/Work/dispatches \
+            -d '{"event_type":"new-api-update", "client_payload": {"ref": "main"}}'
