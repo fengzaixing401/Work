@@ -21,13 +21,6 @@ jobs:
       packages: write
       contents: read
     steps:
-      - name: Verify webhook secret
-        if: github.event_name == 'repository_dispatch'
-        env:
-          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
-        run: |
-          echo "${{ github.event.client_payload.secret }}" | sha256sum | grep "$WEBHOOK_SECRET" || exit 1
-
       - name: Check out the Work repo
         uses: actions/checkout@v3
 
@@ -38,7 +31,7 @@ jobs:
           path: new-api
           ref: ${{ github.event.client_payload.ref || github.event.inputs.branch || 'main' }}
           fetch-depth: 0
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.WEBHOOK_PAT }}
 
       - name: Save version info
         working-directory: new-api
