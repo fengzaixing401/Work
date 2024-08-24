@@ -1,4 +1,4 @@
-name: Check Newapi Update
+name: Check Newapi Update and Build
 
 on:
   schedule:
@@ -16,11 +16,17 @@ jobs:
         with:
           repository: fengzaixing401/Work
           token: ${{ secrets.REPO_PAT }}
+          fetch-depth: 0  # 获取完整历史记录
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
 
       - name: Check for upstream updates
         id: check_updates
         run: |
-          git clone https://github.com/fengzaixing401/new-api.git
+          git clone --depth=1 https://github.com/fengzaixing401/new-api.git
           cd new-api
           git remote add upstream https://github.com/Calcium-Ion/new-api.git
           git fetch upstream
@@ -31,10 +37,18 @@ jobs:
             echo "Updates found"
             echo "has_updates=true" >> $GITHUB_OUTPUT
             git merge upstream/main
-            git push origin main
+            git push https://${{ secrets.REPO_PAT }}@github.com/fengzaixing401/new-api.git main
           fi
 
-  call-build-workflow:
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.OS }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.OS }}-node-
+
+  build:
     needs: check-and-update
     if: needs.check-and-update.outputs.has_updates == 'true'
     uses: ./.github/workflows/Build Newapi.yml
