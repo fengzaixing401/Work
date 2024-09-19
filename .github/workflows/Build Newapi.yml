@@ -3,23 +3,9 @@ name: 构建 Newapi
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: '要从 new-api 仓库构建的分支'
-        required: true
-        default: 'main'
       tag:
-        description: '要构建的标签（留空则为最新）'
-        required: false
-        type: string
-  workflow_call:
-    inputs:
-      branch:
-        description: '要从 new-api 仓库构建的分支'
+        description: '要构建的标签'
         required: true
-        type: string
-      tag:
-        description: '要构建的标签（留空则为最新）'
-        required: false
         type: string
 
 jobs:
@@ -30,21 +16,15 @@ jobs:
       packages: write
       contents: read
     steps:
-      - name: 检出 new-api 仓库
+      - name: 检出仓库
         uses: actions/checkout@v3
         with:
-          repository: fengzaixing401/new-api
-          ref: ${{ inputs.branch || github.event.inputs.branch || 'main' }}
           fetch-depth: 0
+          ref: ${{ github.event.inputs.tag }}
 
-      - name: 获取版本信息
+      - name: 保存版本信息
         run: |
-          if [ -n "${{ inputs.tag || github.event.inputs.tag }}" ]; then
-            git checkout ${{ inputs.tag || github.event.inputs.tag }}
-          fi
-          VERSION=$(git describe --tags 2>/dev/null || echo "1.0.0")
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-          echo ${VERSION} > VERSION
+          echo ${{ github.event.inputs.tag }} > VERSION 
 
       - name: 设置 QEMU
         uses: docker/setup-qemu-action@v2
@@ -71,9 +51,9 @@ jobs:
         with:
           images: |
             fzx401/new-api
-            ghcr.io/fengzaixing401/new-api
+            ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=${{ env.VERSION }}
+            type=raw,value=${{ github.event.inputs.tag }}
             type=raw,value=latest
 
       - name: 构建并推送 Docker 镜像
