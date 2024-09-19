@@ -1,4 +1,4 @@
-name: Check Newapi Update and Build
+name: 检查 Newapi 更新并触发构建
 
 on:
   schedule:
@@ -8,50 +8,38 @@ on:
 jobs:
   check-and-update:
     runs-on: ubuntu-latest
-    outputs:
-      has_updates: ${{ steps.check_updates.outputs.has_updates }}
     steps:
-      - name: Checkout Work repository
+      - name: 检出 fzx new-api 仓库
         uses: actions/checkout@v3
         with:
-          repository: fengzaixing401/Work
+          repository: fengzaixing401/new-api
           token: ${{ secrets.REPO_PAT }}
-          fetch-depth: 0  # 获取完整历史记录
+          fetch-depth: 0
 
-      - name: Configure Git
+      - name: 配置 Git
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
 
-      - name: Check for upstream updates
+      - name: 检查上游更新并同步
         id: check_updates
         run: |
-          git clone --depth=1 https://github.com/fengzaixing401/new-api.git
-          cd new-api
           git remote add upstream https://github.com/Calcium-Ion/new-api.git
           git fetch upstream
           if git diff --quiet HEAD upstream/main; then
-            echo "No updates found"
+            echo "未发现更新"
             echo "has_updates=false" >> $GITHUB_OUTPUT
           else
-            echo "Updates found"
-            echo "has_updates=true" >> $GITHUB_OUTPUT
+            echo "发现更新，正在同步"
             git merge upstream/main
-            git push https://${{ secrets.REPO_PAT }}@github.com/fengzaixing401/new-api.git main
+            git push
+            echo "has_updates=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Cache dependencies
-        uses: actions/cache@v3
+      - name: 触发 Build Newapi 工作流
+        if: steps.check_updates.outputs.has_updates == 'true'
+        uses: benc-uk/workflow-dispatch@v1
         with:
-          path: ~/.npm
-          key: ${{ runner.OS }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.OS }}-node-
-
-  build:
-    needs: check-and-update
-    if: needs.check-and-update.outputs.has_updates == 'true'
-    uses: ./.github/workflows/Build Newapi.yml
-    with:
-      branch: 'main'
-    secrets: inherit
+          workflow: Build Newapi.yml
+          token: ${{ secrets.REPO_PAT }}
+          inputs: '{"branch": "main"}'
