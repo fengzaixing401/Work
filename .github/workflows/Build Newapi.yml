@@ -1,85 +1,74 @@
-name: Build Newapi
+name: 构建 Newapi
 
 on:
-  workflow_call:
-    inputs:
-      branch:
-        description: 'Branch to build from new-api repo'
-        required: true
-        type: string
-      tag:
-        description: 'Tag to build (leave empty for latest)'
-        required: false
-        type: string
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to build from new-api repo'
+        description: '要从 new-api 仓库构建的分支'
         required: true
         default: 'main'
       tag:
-        description: 'Tag to build (leave empty for latest)'
+        description: '要构建的标签（留空则为最新）'
         required: false
 
 jobs:
   push_to_registries:
-    name: Push Docker image to multiple registries
+    name: 推送 Docker 镜像到多个注册表
     runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read
     steps:
-      - name: Check out the Work repo
-        uses: actions/checkout@v3
-
-      - name: Check out the new-api repo
+      - name: 检出 new-api 仓库
         uses: actions/checkout@v3
         with:
           repository: fengzaixing401/new-api
-          path: new-api
           ref: ${{ inputs.branch || 'main' }}
           fetch-depth: 0
-          token: ${{ secrets.REPO_PAT }}
 
-      - name: Save version info
-        working-directory: new-api
+      - name: 获取版本信息
         run: |
           if [ -n "${{ inputs.tag }}" ]; then
             git checkout ${{ inputs.tag }}
           fi
-          git describe --tags 2>/dev/null | tee VERSION || echo "1.0.0" > VERSION
+          VERSION=$(git describe --tags 2>/dev/null || echo "1.0.0")
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo ${VERSION} > VERSION
 
-      - name: Set up QEMU
+      - name: 设置 QEMU
         uses: docker/setup-qemu-action@v2
 
-      - name: Set up Docker Buildx
+      - name: 设置 Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Log in to Docker Hub
+      - name: 登录到 Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Log in to the Container registry
+      - name: 登录到 Container registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.REPO_PAT }}
 
-      - name: Extract metadata (tags, labels) for Docker
+      - name: 提取 Docker 的元数据（标签、标签）
         id: meta
         uses: docker/metadata-action@v4
         with:
           images: |
             fzx401/new-api
             ghcr.io/fengzaixing401/new-api
+          tags: |
+            type=raw,value=${{ env.VERSION }}
+            type=raw,value=latest
 
-      - name: Build and push Docker images
+      - name: 构建并推送 Docker 镜像
         uses: docker/build-push-action@v3
         with:
-          context: new-api
+          context: .
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
