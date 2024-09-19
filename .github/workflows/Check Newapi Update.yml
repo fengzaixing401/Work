@@ -26,6 +26,7 @@ jobs:
         run: |
           git remote add upstream https://github.com/Calcium-Ion/new-api.git
           git fetch upstream
+          LATEST_TAG=$(git ls-remote --tags --refs upstream | sort -V | tail -n 1 | sed 's/.*\///')
           if git diff --quiet HEAD upstream/main; then
             echo "未发现更新"
             echo "has_updates=false" >> $GITHUB_OUTPUT
@@ -35,6 +36,7 @@ jobs:
             git push
             echo "has_updates=true" >> $GITHUB_OUTPUT
           fi
+          echo "latest_tag=${LATEST_TAG}" >> $GITHUB_OUTPUT
 
       - name: 触发 Build Newapi 工作流
         if: steps.check_updates.outputs.has_updates == 'true'
@@ -42,4 +44,4 @@ jobs:
         with:
           workflow: Build Newapi.yml
           token: ${{ secrets.REPO_PAT }}
-          inputs: '{"branch": "main"}'
+          inputs: '{"tag": "${{ steps.check_updates.outputs.latest_tag }}"}'
