@@ -38,10 +38,11 @@ jobs:
           fi
           echo "latest_tag=${LATEST_TAG}" >> $GITHUB_OUTPUT
 
-      - name: 创建并推送标签
+      - name: 同步上游标签
         if: steps.check_updates.outputs.has_updates == 'true'
         run: |
-          git tag ${{ steps.check_updates.outputs.latest_tag }}
+          git fetch upstream --tags
+          git tag ${{ steps.check_updates.outputs.latest_tag }} upstream/${{ steps.check_updates.outputs.latest_tag }}
           git push origin ${{ steps.check_updates.outputs.latest_tag }}
 
       - name: 触发 Build Newapi 工作流
