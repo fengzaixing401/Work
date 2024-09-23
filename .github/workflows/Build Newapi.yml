@@ -2,11 +2,8 @@ name: 构建 Newapi
 
 on:
   workflow_dispatch:
-    inputs:
-      tag:
-        description: '要构建的标签'
-        required: true
-        type: string
+  schedule:
+    - cron: '0 */6 * * *'  # 每6小时运行一次
 
 jobs:
   push_to_registries:
@@ -20,20 +17,22 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: ${{ github.event.inputs.tag }}
 
-      - name: 获取所有标签
+      - name: 获取最新标签
+        id: get_latest_tag
         run: |
-          git fetch --tags
+          LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
 
-      - name: 调试标签是否存在
-        run: |
-          git tag -l
-          git show-ref --tags
+      - name: 检出最新标签
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ env.LATEST_TAG }}
 
       - name: 保存版本信息
         run: |
-          echo ${{ github.event.inputs.tag }} > VERSION 
+          echo ${{ env.LATEST_TAG }} > VERSION 
 
       - name: 设置 QEMU
         uses: docker/setup-qemu-action@v2
@@ -62,7 +61,7 @@ jobs:
             fzx401/new-api
             ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=${{ github.event.inputs.tag }}
+            type=raw,value=${{ env.LATEST_TAG }}
             type=raw,value=latest
 
       - name: 构建并推送 Docker 镜像
