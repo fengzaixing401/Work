@@ -13,9 +13,11 @@ jobs:
       packages: write
       contents: read
     steps:
-      - name: 检出仓库
+      - name: 检出 fzx new-api 仓库
         uses: actions/checkout@v3
         with:
+          repository: fengzaixing401/new-api
+          token: ${{ secrets.REPO_PAT }}
           fetch-depth: 0
 
       - name: 获取最新标签
@@ -27,6 +29,8 @@ jobs:
       - name: 检出最新标签
         uses: actions/checkout@v3
         with:
+          repository: fengzaixing401/new-api
+          token: ${{ secrets.REPO_PAT }}
           fetch-depth: 0
           ref: ${{ env.LATEST_TAG }}
 
