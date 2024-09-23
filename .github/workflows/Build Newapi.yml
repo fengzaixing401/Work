@@ -22,6 +22,15 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.tag }}
 
+      - name: 获取所有标签
+        run: |
+          git fetch --tags
+
+      - name: 调试标签是否存在
+        run: |
+          git tag -l
+          git show-ref --tags
+
       - name: 保存版本信息
         run: |
           echo ${{ github.event.inputs.tag }} > VERSION 
