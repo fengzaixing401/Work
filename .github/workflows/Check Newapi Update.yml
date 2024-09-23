@@ -47,8 +47,9 @@ jobs:
 
       - name: 触发 Build Newapi 工作流
         if: steps.check_updates.outputs.has_updates == 'true'
-        uses: benc-uk/workflow-dispatch@v1
-        with:
-          workflow: Build Newapi.yml
-          token: ${{ secrets.REPO_PAT }}
-          inputs: '{"tag": "${{ steps.check_updates.outputs.latest_tag }}"}'
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.REPO_PAT }}" \
+            https://api.github.com/repos/fengzaixing401/new-api/actions/workflows/Build%20Newapi.yml/dispatches \
+            -d '{"ref":"main"}'
