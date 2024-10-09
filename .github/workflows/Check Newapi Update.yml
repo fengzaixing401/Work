@@ -25,28 +25,46 @@ jobs:
         id: check_updates
         run: |
           git remote add upstream https://github.com/Calcium-Ion/new-api.git
-          git fetch upstream
-          LATEST_TAG=$(git ls-remote --tags --refs upstream | sort -V | tail -n 1 | sed 's/.*\///')
+          git fetch upstream --tags
+          
+          # 检查是否有新的提交
           if git diff --quiet HEAD upstream/main; then
-            echo "未发现更新"
-            echo "has_updates=false" >> $GITHUB_OUTPUT
+            echo "代码没有更新"
+            HAS_CODE_UPDATES=false
           else
-            echo "发现更新，正在同步"
+            echo "发现代码更新，正在同步"
             git merge upstream/main
             git push
-            echo "has_updates=true" >> $GITHUB_OUTPUT
+            HAS_CODE_UPDATES=true
           fi
-          echo "latest_tag=${LATEST_TAG}" >> $GITHUB_OUTPUT
-
-      - name: 同步上游标签
-        if: steps.check_updates.outputs.has_updates == 'true'
-        run: |
-          git fetch upstream --tags
-          git tag ${{ steps.check_updates.outputs.latest_tag }} upstream/${{ steps.check_updates.outputs.latest_tag }}
-          git push origin ${{ steps.check_updates.outputs.latest_tag }}
+          
+          # 检查是否有新的标签
+          LOCAL_TAGS=$(git tag -l)
+          REMOTE_TAGS=$(git ls-remote --tags --refs upstream | cut -f2 | sed 's/refs\/tags\///')
+          NEW_TAGS=$(comm -13 <(echo "$LOCAL_TAGS" | sort) <(echo "$REMOTE_TAGS" | sort))
+          
+          if [ -n "$NEW_TAGS" ]; then
+            echo "发现新标签，正在同步"
+            echo "$NEW_TAGS" | while read -r tag; do
+              git tag $tag upstream/$tag
+              git push origin $tag
+            done
+            HAS_TAG_UPDATES=true
+          else
+            echo "没有新的标签"
+            HAS_TAG_UPDATES=false
+          fi
+          
+          # 获取最新的标签
+          LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
+          
+          # 设置输出
+          echo "has_code_updates=$HAS_CODE_UPDATES" >> $GITHUB_OUTPUT
+          echo "has_tag_updates=$HAS_TAG_UPDATES" >> $GITHUB_OUTPUT
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
 
       - name: 触发 Build Newapi 工作流
-        if: steps.check_updates.outputs.has_updates == 'true'
+        if: steps.check_updates.outputs.has_code_updates == 'true' || steps.check_updates.outputs.has_tag_updates == 'true'
         run: |
           curl -X POST \
             -H "Accept: application/vnd.github.v3+json" \
