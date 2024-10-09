@@ -25,46 +25,34 @@ jobs:
         id: check_updates
         run: |
           git remote add upstream https://github.com/Calcium-Ion/new-api.git
-          git fetch upstream --tags
+          
+          # 拉取原始仓库数据
+          git fetch upstream
           
           # 检查是否有新的提交
           if git diff --quiet HEAD upstream/main; then
             echo "代码没有更新"
-            HAS_CODE_UPDATES=false
+            HAS_UPDATES=false
           else
-            echo "发现代码更新，正在同步"
-            git merge upstream/main
-            git push
-            HAS_CODE_UPDATES=true
+            echo "发现更新，正在同步"
+            git rebase upstream/main
+            git push --force-with-lease
+            HAS_UPDATES=true
           fi
           
-          # 检查是否有新的标签
-          LOCAL_TAGS=$(git tag -l)
-          REMOTE_TAGS=$(git ls-remote --tags --refs upstream | cut -f2 | sed 's/refs\/tags\///')
-          NEW_TAGS=$(comm -13 <(echo "$LOCAL_TAGS" | sort) <(echo "$REMOTE_TAGS" | sort))
-          
-          if [ -n "$NEW_TAGS" ]; then
-            echo "发现新标签，正在同步"
-            echo "$NEW_TAGS" | while read -r tag; do
-              git fetch upstream refs/tags/$tag:refs/tags/$tag
-              git push origin refs/tags/$tag
-            done
-            HAS_TAG_UPDATES=true
-          else
-            echo "没有新的标签"
-            HAS_TAG_UPDATES=false
-          fi
+          # 同步标签
+          git fetch --tags upstream
+          git push --tags
           
           # 获取最新的标签
           LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
           
           # 设置输出
-          echo "has_code_updates=$HAS_CODE_UPDATES" >> $GITHUB_OUTPUT
-          echo "has_tag_updates=$HAS_TAG_UPDATES" >> $GITHUB_OUTPUT
+          echo "has_updates=$HAS_UPDATES" >> $GITHUB_OUTPUT
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
 
       - name: 触发 Build Newapi 工作流
-        if: steps.check_updates.outputs.has_code_updates == 'true' || steps.check_updates.outputs.has_tag_updates == 'true'
+        if: steps.check_updates.outputs.has_updates == 'true'
         run: |
           curl -X POST \
             -H "Accept: application/vnd.github.v3+json" \
