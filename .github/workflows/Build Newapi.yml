@@ -2,8 +2,8 @@ name: 构建 Newapi
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 */6 * * *'  # 每6小时运行一次
+#  schedule:
+#    - cron: '0 */6 * * *'  # 每6小时运行一次
 
 jobs:
   push_to_registries:
